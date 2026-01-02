@@ -101,9 +101,11 @@ public class WeatherService : IWeatherService
 
     public async Task<RecommendationResponse> GetRecommendationAsync(RecommendationRequest request)
     {
-        // Validate date: within next 7 days
-        var travelDate = request.TravelDate.ToDateTime(TimeOnly.MinValue);
-        if (travelDate < DateTime.UtcNow.AddHours(6).Date || travelDate > DateTime.UtcNow.AddDays(7).Date)
+        // Validate travel date: within next 7 days
+        var today = DateTime.UtcNow.AddHours(6).Date;
+        var travelDateTime = request.TravelDate.ToDateTime(TimeOnly.MinValue);
+
+        if (travelDateTime.Date < today || travelDateTime.Date > today.AddDays(7))
         {
             return new RecommendationResponse
             {
@@ -113,7 +115,7 @@ public class WeatherService : IWeatherService
         }
 
         var districts = await _districtsService.GetDistrictsAsync();
-        var destDistrict = districts.FirstOrDefault(d => 
+        var destDistrict = districts.FirstOrDefault(d =>
             string.Equals(d.Name, request.DestinationDistrict, StringComparison.OrdinalIgnoreCase));
 
         if (destDistrict == null)
@@ -125,48 +127,90 @@ public class WeatherService : IWeatherService
             };
         }
 
-        // Format coords
+        // Format coordinates
         var lats = $"{request.CurrentLatitude.ToString(CultureInfo.InvariantCulture)},{destDistrict.Lat.ToString(CultureInfo.InvariantCulture)}";
         var longs = $"{request.CurrentLongitude.ToString(CultureInfo.InvariantCulture)},{destDistrict.Long.ToString(CultureInfo.InvariantCulture)}";
+        var dateStr = request.TravelDate.ToString("yyyy-MM-dd");
 
         var client = _httpClientFactory.CreateClient();
 
-        var dateStr = request.TravelDate.ToString("yyyy-MM-dd");
-        var query = $"?latitude={lats}&longitude={longs}&daily=temperature_2m_max&start_date={dateStr}&end_date={dateStr}&timezone=Asia%2FDhaka";
+        // Fetch hourly data for temperature and PM2.5
+        var weatherQuery = $"?latitude={lats}&longitude={longs}&hourly=temperature_2m&start_date={dateStr}&end_date={dateStr}&timezone=Asia%2FDhaka";
+        var weatherJson = await client.GetStringAsync(WeatherUrl + weatherQuery);
+        var weatherLocations = JsonSerializer.Deserialize<List<MeteoLocation>>(weatherJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
-        // Current location temp (index 0), destination (index 1)
-        var weatherJson = await client.GetStringAsync(WeatherUrl + query);
-        var weatherList = JsonSerializer.Deserialize<List<MeteoLocation>>(weatherJson,
-        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-
-        var currentTemp = weatherList[0].Hourly.Temperature_2m?.FirstOrDefault() ?? 999;
-        var destTemp = weatherList[1].Hourly.Temperature_2m?.FirstOrDefault() ?? 999;
-
-        // PM2.5 - use daily average or hourly 2PM if available
         var airQuery = $"?latitude={lats}&longitude={longs}&hourly=pm2_5&start_date={dateStr}&end_date={dateStr}&timezone=Asia%2FDhaka";
         var airJson = await client.GetStringAsync(AirQualityUrl + airQuery);
-        var airList = JsonSerializer.Deserialize<List<MeteoLocation>>(airJson,
-        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var airLocations = JsonSerializer.Deserialize<List<MeteoLocation>>(airJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
-        var currentPm25 = Extract2PmValues(airList[0].Hourly.Time, airList[0].Hourly.Pm2_5).FirstOrDefault(999);
-        var destPm25 = Extract2PmValues(airList[1].Hourly.Time, airList[1].Hourly.Pm2_5).FirstOrDefault(999);
+        // Find 2 PM (14:00) index
+        var times = weatherLocations[0].Hourly.Time;
+        int twoPmIndex = -1;
+        for (int i = 0; i < times.Count; i++)
+        {
+            if (DateTime.Parse(times[i]).Hour == 14)
+            {
+                twoPmIndex = i;
+                break;
+            }
+        }
+
+        // If no 2 PM data available at all
+        if (twoPmIndex < 0)
+        {
+            return new RecommendationResponse
+            {
+                Recommendation = "Not Recommended",
+                Reason = "No 2 PM weather data available for the selected date."
+            };
+        }
+
+        // Extract values with null checks
+        var currentTempOpt = weatherLocations[0].Hourly.Temperature_2m?[twoPmIndex];
+        var destTempOpt = weatherLocations[1].Hourly.Temperature_2m?[twoPmIndex];
+        var currentPm25Opt = airLocations[0].Hourly.Pm2_5?[twoPmIndex];
+        var destPm25Opt = airLocations[1].Hourly.Pm2_5?[twoPmIndex];
+
+        // If any value is missing → insufficient data
+        if (!currentTempOpt.HasValue || !destTempOpt.HasValue ||
+            !currentPm25Opt.HasValue || !destPm25Opt.HasValue)
+        {
+            return new RecommendationResponse
+            {
+                Recommendation = "Not Recommended",
+                Reason = "Insufficient weather or air quality data available for 2 PM on the selected date."
+            };
+        }
+
+        double currentTemp = currentTempOpt.Value;
+        double destTemp = destTempOpt.Value;
+        double currentPm25 = currentPm25Opt.Value;
+        double destPm25 = destPm25Opt.Value;
 
         bool isCooler = destTemp < currentTemp;
         bool isCleaner = destPm25 < currentPm25;
 
         if (isCooler && isCleaner)
         {
+            var tempDiff = Math.Round(currentTemp - destTemp, 1);
+            var pmDiff = Math.Round(currentPm25 - destPm25, 1);
+
             return new RecommendationResponse
             {
                 Recommendation = "Recommended",
-                Reason = $"Your destination is {Math.Round(currentTemp - destTemp, 1)}°C cooler and has better air quality (PM2.5 {Math.Round(currentPm25 - destPm25, 1)} μg/m³ lower). Enjoy your trip!"
+                Reason = $"Your destination is {tempDiff}°C cooler and has significantly better air quality. Enjoy your trip!"
             };
         }
+
+        string tempWord = isCooler ? "cooler" : "hotter";
+        string airWord = isCleaner ? "better" : "worse";
 
         return new RecommendationResponse
         {
             Recommendation = "Not Recommended",
-            Reason = $"Your destination is {(isCooler ? "cooler" : "hotter")} but has {(isCleaner ? "better" : "worse")} air quality than your current location. It's better to stay where you are."
+            Reason = $"Your destination is {tempWord} and has {airWord} air quality than your current location. It's better to stay where you are."
         };
     }
 }
