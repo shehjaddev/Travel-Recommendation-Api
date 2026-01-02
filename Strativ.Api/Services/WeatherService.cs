@@ -31,11 +31,9 @@ public class WeatherService : IWeatherService
 
     public async Task<(List<TopDistrictResponse> Results, bool FromCache)> GetTop10DistrictsAsync()
     {
-        bool fromCache = _cache.TryGetValue(CacheKey, out List<TopDistrictResponse> cached);
-
-        if (fromCache)
+        if (_cache.TryGetValue(CacheKey, out List<TopDistrictResponse>? cached) && cached is not null)
         {
-            return (cached!, true);
+            return (cached, true);
         }
 
         var districts = await _districtsService.GetDistrictsAsync();
@@ -91,7 +89,7 @@ public class WeatherService : IWeatherService
     private static List<double> Extract2PmValues(List<string> times, List<double?> values)
     {
         var result = new List<double>();
-        for (int i = 0; i < times.Count; i++)
+        for (int i = 0; i < times.Count && i < values.Count; i++)
         {
             if (DateTime.Parse(times[i]).Hour == 14 && values[i].HasValue)
             {

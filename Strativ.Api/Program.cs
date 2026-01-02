@@ -1,3 +1,4 @@
+using Strativ.Api.BackgroundServices;
 using Strativ.Api.Controllers;
 using Strativ.Api.Services;
 
@@ -7,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
+builder.Services.AddHostedService<CacheWarmupService>();
 
 builder.Services.AddScoped<IDistrictsService, DistrictsService>();
 builder.Services.AddScoped<IWeatherService, WeatherService>();
