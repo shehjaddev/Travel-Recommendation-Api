@@ -1,0 +1,32 @@
+# .NET Build artifacts
+**/bin/
+**/obj/
+
+# Visual Studio / Rider / VSCode
+**/*.user
+**/*.suo
+**/*.sln.docstates
+.vs/
+.vscode/
+.idea/
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs / temp
+*.log
+logs/
+temp/
+
+# Local config
+appsettings.*.json
+!appsettings.json
+
+# Docker (optional - keep if you want them in repo)
+# Dockerfile*
+# docker-compose*.yml
+# .dockerignore
+
+# Keep Data folder structure but ignore JSON if you want (or keep it tracked)
+# Data/*.json
