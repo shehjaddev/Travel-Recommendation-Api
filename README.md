@@ -7,8 +7,6 @@ The API:
 - **Ranks the coolest and cleanest 10 districts** in Bangladesh using Open-Meteo weather and air quality data.
 - Provides a **travel recommendation** for a user’s trip based on their current location, destination district, and travel date.
 
-> **Note:** These JSON examples are illustrative; actual values and even the recommendation text will vary based on real-time Open-Meteo data.
-
 ---
 
 ## Tech Stack
