@@ -8,6 +8,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<IDistrictsService, DistrictsService>();
+builder.Services.AddScoped<IWeatherService, WeatherService>();
 
 var app = builder.Build();
 
@@ -25,6 +26,19 @@ app.MapGet("/debug/districts", async (IDistrictsService service) =>
     {
         Count = districts.Count,
         Sample = districts.Take(3).Select(d => new { d.Name, d.Lat, d.Long })
+    });
+});
+
+// Debug endpoint to verify top10 load correctly
+app.MapGet("/debug/top10", async (IWeatherService service) =>
+{
+    var (top10, fromCache) = await service.GetTop10DistrictsAsync();
+    
+    return Results.Ok(new
+    {
+        Count = top10.Count,
+        Data = top10,
+        FromCache = fromCache
     });
 });
 
