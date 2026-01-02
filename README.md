@@ -142,11 +142,11 @@ dotnet run --project Strativ.Api
 
 By default (per `launchSettings.json`), the app listens on:
 
-- `http://localhost:5100`
+- `http://localhost:8080`
 
 Swagger UI will be available at:
 
-- `http://localhost:5100/swagger`
+- `http://localhost:8080/swagger`
 
 ---
 
@@ -289,13 +289,11 @@ This will run tests from the `Strativ.Api.Tests` project, including:
 
 ## How to Try the APIs Manually
 
-Once the API is running (either locally on port `5100` or in Docker on port `8080`), you can verify the endpoints in two main ways.
+Once the API is running (on port `8080`), you can verify the endpoints in two main ways.
 
 ### 1. Using Swagger UI (Recommended)
 
 - **Local .NET run**:
-  - Open: `http://localhost:5100/swagger`
-- **Docker** (`docker compose up`):
   - Open: `http://localhost:8080/swagger`
 
 From Swagger you can:
@@ -305,18 +303,16 @@ From Swagger you can:
 
 ### 2. Using curl
 
-Assuming the app is running locally via `dotnet run` (port `5100`):
-
 #### Get Top 10 Districts
 
 ```bash
-curl http://localhost:5100/api/v1/districts/top10
+curl http://localhost:8080/api/v1/districts/top10
 ```
 
 #### Travel Recommendation
 
 ```bash
-curl -X POST "http://localhost:5100/api/v1/recommendation" \
+curl -X POST "http://localhost:8080/api/v1/recommendation" \
   -H "Content-Type: application/json" \
   -d '{
     "currentLatitude": 23.7808,
@@ -325,8 +321,6 @@ curl -X POST "http://localhost:5100/api/v1/recommendation" \
     "travelDate": "2026-01-05"
   }'
 ```
-
-If you are running via Docker (`docker compose up`), replace `5100` with `8080` in the URLs above.
 
 ---
 

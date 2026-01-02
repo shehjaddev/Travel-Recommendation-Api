@@ -1,4 +1,4 @@
-@Strativ.Api_HostAddress = http://localhost:5100
+@Strativ.Api_HostAddress = http://localhost:8080
 
 GET {{Strativ.Api_HostAddress}}/weatherforecast/
 Accept: application/json
