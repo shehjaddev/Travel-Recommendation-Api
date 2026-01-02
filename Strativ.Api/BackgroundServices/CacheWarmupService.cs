@@ -19,7 +19,7 @@ public class CacheWarmupService : BackgroundService
         await WarmupCacheAsync();
 
         // Then every 30 minutes
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(30));
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(60));
 
         while (!stoppingToken.IsCancellationRequested &&
                await timer.WaitForNextTickAsync(stoppingToken))
