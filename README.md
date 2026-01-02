@@ -7,6 +7,8 @@ The API:
 - **Ranks the coolest and cleanest 10 districts** in Bangladesh using Open-Meteo weather and air quality data.
 - Provides a **travel recommendation** for a user’s trip based on their current location, destination district, and travel date.
 
+> **Note:** These JSON examples are illustrative; actual values and even the recommendation text will vary based on real-time Open-Meteo data.
+
 ---
 
 ## Tech Stack
@@ -196,52 +198,48 @@ Any additional configuration for timeouts, caching, or external API URLs can be 
 ## API Endpoints
 
 > The exact routes and DTO shapes are visible in Swagger once you run the project.  
-> Below is a conceptual contract; adjust names to match your controllers if they differ.
+> Below is an overview aligned with the current controllers and models.
 
 ### 1. Get Top 10 Best Districts
 
 - **HTTP**: `GET`
-- **Route**: `/api/districts/top10`  
-  (See `DistrictsController`)
+- **Route**: `/api/v1/districts/top10`  
+  (See `DistrictsController` → returns `List<TopDistrictResponse>`)
 
-#### Query Parameters (if implemented)
+`TopDistrictResponse` shape:
 
-- `days` _(optional, int)_ – number of forecast days to consider (default: `7`).
-- `timeOfDay` _(optional, string)_ – time of day to derive temperature from (default: `"14:00"`).
+```json
+{
+  "name": "Bandarban",
+  "averageTemperature2Pm": 26.4,
+  "averagePm25_2Pm": 7.2
+}
+```
 
-#### Sample Response
+Example response (array of up to 10 items, ordered by coolest then cleanest):
 
 ```json
 [
   {
     "name": "Bandarban",
-    "latitude": 22.1953,
-    "longitude": 92.2185,
-    "averageTemperatureAt2Pm": 26.4,
-    "averagePm25": 7.2,
-    "rank": 1
+    "averageTemperature2Pm": 26.4,
+    "averagePm25_2Pm": 7.2
   },
   {
     "name": "Rangamati",
-    "latitude": 22.7324,
-    "longitude": 92.2985,
-    "averageTemperatureAt2Pm": 26.9,
-    "averagePm25": 8.1,
-    "rank": 2
+    "averageTemperature2Pm": 26.9,
+    "averagePm25_2Pm": 8.1
   }
-  // ... up to 10 items
 ]
 ```
-
----
 
 ### 2. Travel Recommendation
 
 - **HTTP**: `POST`
-- **Route**: `/api/recommendation/travel`  
-  (See `RecommendationController`)
+- **Route**: `/api/v1/recommendation`  
+  (See `RecommendationController` → accepts `RecommendationRequest`, returns `RecommendationResponse`)
 
-#### Request Body (example)
+`RecommendationRequest` body:
 
 ```json
 {
@@ -252,39 +250,21 @@ Any additional configuration for timeouts, caching, or external API URLs can be 
 }
 ```
 
-#### Response (example)
+`RecommendationResponse`:
 
 ```json
 {
-  "status": "Recommended",
-  "reason": "Your destination is 3°C cooler and has significantly better air quality. Enjoy your trip!",
-  "current": {
-    "temperatureAt2Pm": 31.2,
-    "pm25": 45.0
-  },
-  "destination": {
-    "district": "Bandarban",
-    "temperatureAt2Pm": 28.2,
-    "pm25": 15.0
-  }
+  "recommendation": "Recommended",
+  "reason": "Your destination is 3°C cooler and has significantly better air quality. Enjoy your trip!"
 }
 ```
 
-Or:
+or:
 
 ```json
 {
-  "status": "Not Recommended",
-  "reason": "Your destination is hotter and has worse air quality than your current location. It’s better to stay where you are.",
-  "current": {
-    "temperatureAt2Pm": 29.0,
-    "pm25": 20.0
-  },
-  "destination": {
-    "district": "Chattogram",
-    "temperatureAt2Pm": 32.0,
-    "pm25": 55.0
-  }
+  "recommendation": "Not Recommended",
+  "reason": "Your destination is hotter and has worse air quality than your current location. It’s better to stay where you are."
 }
 ```
 
@@ -304,6 +284,49 @@ This will run tests from the `Strativ.Api.Tests` project, including:
   - Aggregation and ranking logic of coolest + cleanest districts.
   - Travel recommendation decision logic.
 - **Integration-style tests** (if added) using sample responses in `Strativ.Api.Tests/TestData`.
+
+---
+
+## How to Try the APIs Manually
+
+Once the API is running (either locally on port `5100` or in Docker on port `8080`), you can verify the endpoints in two main ways.
+
+### 1. Using Swagger UI (Recommended)
+
+- **Local .NET run**:
+  - Open: `http://localhost:5100/swagger`
+- **Docker** (`docker compose up`):
+  - Open: `http://localhost:8080/swagger`
+
+From Swagger you can:
+
+- Call `GET /api/v1/districts/top10` to see the current top 10 coolest & cleanest districts.
+- Call `POST /api/v1/recommendation` with a JSON body to see if a trip is recommended.
+
+### 2. Using curl
+
+Assuming the app is running locally via `dotnet run` (port `5100`):
+
+#### Get Top 10 Districts
+
+```bash
+curl http://localhost:5100/api/v1/districts/top10
+```
+
+#### Travel Recommendation
+
+```bash
+curl -X POST "http://localhost:5100/api/v1/recommendation" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentLatitude": 23.7808,
+    "currentLongitude": 90.2792,
+    "destinationDistrict": "Bandarban",
+    "travelDate": "2026-01-05"
+  }'
+```
+
+If you are running via Docker (`docker compose up`), replace `5100` with `8080` in the URLs above.
 
 ---
 
