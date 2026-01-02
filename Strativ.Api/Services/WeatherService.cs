@@ -81,7 +81,7 @@ public class WeatherService : IWeatherService
             .Take(10)
             .ToList();
 
-        _cache.Set(CacheKey, top10, TimeSpan.FromMinutes(30));
+        _cache.Set(CacheKey, top10, TimeSpan.FromMinutes(60));
 
         return (top10, false);
     }
