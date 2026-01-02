@@ -342,9 +342,7 @@ For this assignment the API uses **in-memory caching** (`IMemoryCache`) instead 
 - **Simplicity & focus**:  
   The goal is to demonstrate the domain logic (ranking districts, travel recommendation) and sensible use of caching, not full production infrastructure.
 - **Single-instance assumption**:  
-  The solution is intended to run as a single service instance (locally or via the provided Docker setup), where in-memory cache is sufficient.
-- **No extra infrastructure requirements**:  
-  Avoids adding Redis as an external dependency that reviewers would need to install/configure just to run the project.
+  The solution is intended to run as a single service instance, where in-memory cache is sufficient.
 
 In a real production deployment, a **distributed cache** such as Redis would be a good choice when:
 
